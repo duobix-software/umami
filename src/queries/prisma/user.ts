@@ -10,6 +10,15 @@ export interface GetUserOptions {
   showDeleted?: boolean;
 }
 
+export async function getFirstAdminUser() {
+  return findUser({
+    where: {
+      role: 'admin',
+      username: 'admin',
+    },
+  });
+}
+
 async function findUser(
   criteria: Prisma.UserFindUniqueArgs,
   options: GetUserOptions = {},

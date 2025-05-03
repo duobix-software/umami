@@ -6,11 +6,12 @@ import { PERMISSIONS, ROLE_PERMISSIONS, ROLES, SHARE_TOKEN_HEADER } from '@/lib/
 import { secret, getRandomChars } from '@/lib/crypto';
 import { createSecureToken, parseSecureToken, parseToken } from '@/lib/jwt';
 import { ensureArray } from '@/lib/utils';
-import { getTeamUser, getUser, getWebsite } from '@/queries';
+import { getFirstAdminUser, getTeamUser, getUser, getWebsite } from '@/queries';
 import { Auth } from './types';
 
 const log = debug('umami:auth');
 const cloudMode = process.env.CLOUD_MODE;
+const apiKey = process.env.API_KEY;
 const SALT_ROUNDS = 10;
 
 export function hashPassword(password: string, rounds = SALT_ROUNDS) {
@@ -22,6 +23,20 @@ export function checkPassword(password: string, passwordHash: string) {
 }
 
 export async function checkAuth(request: Request) {
+  const url = new URL(request.url);
+  const apiKeyParam = url.searchParams.get('apikey');
+
+  if (apiKeyParam && apiKey && apiKey == apiKeyParam) {
+    const user = await getFirstAdminUser();
+    return {
+      user: { ...user, isAdmin: true },
+      grant: null,
+      token: null,
+      shareToken: null,
+      authKey: null,
+    };
+  }
+
   const token = request.headers.get('authorization')?.split(' ')?.[1];
   const payload = parseSecureToken(token, secret());
   const shareToken = await parseShareToken(request.headers);
